@@ -22,10 +22,10 @@ class Fleet < Formula
   include Language::Python::Virtualenv
 
   desc "Work router and board for AI coding agents"
-  homepage "https://github.com/psingh24/fleet-command"
-  url "ssh://git@github.com/psingh24/fleet-command.git",
+  homepage "https://github-personal/psingh24/fleet"
+  url "ssh://git@github-personal/psingh24/fleet.git",
       tag:      "v5.1.0a32",
-      revision: "92428057203326e305db0253bfa3c5a193e40303"
+      revision: "98be10fe3d54fdb9e2b712c18092ddf58f5c7c9f"
   version "5.1.0a32"
 
   depends_on "python@3.13"
