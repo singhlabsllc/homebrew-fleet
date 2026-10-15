@@ -24,9 +24,9 @@ class Fleet < Formula
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/psingh24/fleet"
   url "ssh://git@github.com/psingh24/fleet.git",
-      tag:      "v5.1.0a47",
-      revision: "5cc97b43029ed59a9ecb4d8766b175b54bc087a7"
-  version "5.1.0a47"
+      tag:      "v5.1.0a48",
+      revision: "e1c5af51252672e20bc3ed16977384e01dfeb486"
+  version "5.1.0a48"
 
   depends_on "python@3.13"
 
