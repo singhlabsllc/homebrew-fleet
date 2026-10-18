@@ -24,9 +24,9 @@ class Fleet < Formula
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/psingh24/fleet"
   url "ssh://git@github.com/psingh24/fleet.git",
-      tag:      "v5.1.0a51",
-      revision: "04fc439b5fb7d22a411e861890dbe5e386cfe1de"
-  version "5.1.0a51"
+      tag:      "v5.1.0a52",
+      revision: "bbef8835e9dbb7051577688ec2332dc316d1963e"
+  version "5.1.0a52"
 
   depends_on "python@3.13"
 
@@ -111,6 +111,28 @@ class Fleet < Formula
     # beside the line it interrupted.
     log_path var/"log/fleet.log"
     error_log_path var/"log/fleet.log"
+  end
+
+  # The menu bar app is built on the operator's Mac into ~/Applications, and `brew upgrade`
+  # never touches it: an app built before an upgrade kept running for weeks, missing every
+  # menu-bar change since (fleet#198). It is not rebuilt from here on purpose. A formula
+  # must not write outside the keg without being asked, `post_install` runs in brew's
+  # sandbox with HOME redirected (so it would build into the wrong ~/Applications), and the
+  # rebuild signs, boots out and bootstraps a LaunchAgent in the user's GUI session. So
+  # the caveat says it, and the app says it too: `install-menubar.sh --doctor`,
+  # `fleet agent --doctor`, /health and the board's Settings page compare the bundle's
+  # recorded source hash with this keg's `menubar/src` and print "stale ... rebuild with".
+  def caveats
+    <<~EOS
+      The menu bar app (~/Applications/Fleet Command.app) is built from source on your
+      Mac and is NOT rebuilt by `brew upgrade`. If you use it, rebuild it after an upgrade
+      that changed it:
+
+        sh #{opt_pkgshare}/service/install-menubar.sh
+
+      `sh #{opt_pkgshare}/service/install-menubar.sh --doctor` (and `fleet agent --doctor`,
+      and the board's Settings page) say when it is stale.
+    EOS
   end
 
   test do
