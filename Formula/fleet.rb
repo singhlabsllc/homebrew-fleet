@@ -24,9 +24,9 @@ class Fleet < Formula
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/psingh24/fleet"
   url "ssh://git@github.com/psingh24/fleet.git",
-      tag:      "v5.1.0a62",
-      revision: "0bf8e10f565040c2b9ab75220d0622c786b1fc3c"
-  version "5.1.0a62"
+      tag:      "v5.1.0a63",
+      revision: "be98cd189aaa0b22993ce9ca0b19a65fba9121c0"
+  version "5.1.0a63"
 
   # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
   # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
@@ -161,6 +161,11 @@ class Fleet < Formula
 
       `sh #{opt_pkgshare}/service/install-menubar.sh --doctor` (and `fleet agent --doctor`,
       and the board's Settings page) say when it is stale.
+
+      `fleet init` seeds a new FLEET_HOME with a config, a workers file and the starter
+      policies. It only creates the files that are missing and never overwrites one, so it
+      is safe to re-run. The server also copies any missing starter policy on its first
+      start, so `fleet init` is optional.
     EOS
   end
 
