@@ -24,15 +24,22 @@ class Fleet < Formula
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/psingh24/fleet"
   url "ssh://git@github.com/psingh24/fleet.git",
-      tag:      "v5.1.0a60",
-      revision: "47cddbddc36a3a428cd4ad587f96d79e974e07d0"
-  version "5.1.0a60"
+      tag:      "v5.1.0a61",
+      revision: "328d2c0ba6b6c7cd86a18f60c5537349a0a4c259"
+  version "5.1.0a61"
 
-  depends_on "python@3.13"
+  # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
+  # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
+  # does not manage. A formula that depends on brew's Python can only be installed while
+  # that Python is on its latest bottle ("You must brew unpin python@3.13"), so a broken
+  # python@3.13 bottle (3.13.16_1 on macOS 26.1: its pyexpat needs a newer libexpat than
+  # the system's) held every fleet upgrade hostage and, once unpinned, would have stopped
+  # the running fleet. The product is stdlib only and its floor is Python 3.9.
+  SYSTEM_PYTHON = "/usr/bin/python3".freeze
 
   # The build backend, and what it needs to run. They are not unused: brew builds in a
-  # sandbox with no network, and the venv has no backend of its own (brew's python@3.13
-  # ships pip and wheel, nothing else), so pip's isolated build — which fetches
+  # sandbox with no network, and the venv has no backend of its own (it sees only the Command Line
+  # Tools' pip and setuptools), so pip's isolated build — which fetches
   # pyproject.toml's `hatchling` from PyPI — dies with "No matching distribution found
   # for hatchling". Instead these go into the venv first and the build runs without
   # isolation, so `brew install` needs nothing from PyPI.
@@ -41,8 +48,11 @@ class Fleet < Formula
   # Its dependencies are wheels on purpose. Each one's sdist needs a backend of its own —
   # flit_core, setuptools with setuptools-scm or calver, poetry-core — and each of those
   # would be another resource to carry. All five are pure Python (py3-none-any), so one
-  # wheel serves every Mac. The list is hatchling's Requires-Dist on Python 3.13; a
-  # hatchling bump re-reads it off the sdist's PKG-INFO.
+  # wheel serves every Mac. The list is hatchling's Requires-Dist on Python 3.9, which
+  # includes tomli (hatchling reads pyproject.toml with it below 3.11). hatchling is held
+  # at 1.27.0, the newest release that runs on Python 3.9: 1.28.0 and later require 3.10
+  # (pip would refuse them, measured on PyPI's requires_python 2026-10-21). A hatchling
+  # bump re-reads the list off the sdist's PKG-INFO and checks Requires-Python.
   resource "packaging" do
     url "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
     sha256 "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
@@ -58,9 +68,9 @@ class Fleet < Formula
     sha256 "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746"
   end
 
-  resource "tomlkit" do
-    url "https://files.pythonhosted.org/packages/13/bc/8c13eb66537dce1d2bd3a57132902f38d0e7f5bb46fa9f4daed9fe9d76ee/tomlkit-0.15.1-py3-none-any.whl"
-    sha256 "177a05aece5a8ca5266fd3c448abb47b8d352f09d477d3ca8332db4d89b24304"
+  resource "tomli" do
+    url "https://files.pythonhosted.org/packages/60/3f/3e3f8fd0919249b0200c80fbc4f9a1e70be19f9883da71dfb7f8b9ab8aca/tomli-2.5.0-py3-none-any.whl"
+    sha256 "32a7b79ac57a2e83670ce329ccf675798bc5a2094783a63676866b70503f2e2b"
   end
 
   resource "trove-classifiers" do
@@ -69,16 +79,35 @@ class Fleet < Formula
   end
 
   resource "hatchling" do
-    url "https://files.pythonhosted.org/packages/f6/97/b5312f01a8c6daf729a9d272dd442e0c546dbcc630495788786c4b567ed0/hatchling-1.32.4.tar.gz"
-    sha256 "c4468f73144c054d2aab4ef0f0378c43b9878bf07f8ffd6b79690e970d375f07"
+    url "https://files.pythonhosted.org/packages/8f/8a/cc1debe3514da292094f1c3a700e4ca25442489731ef7c0814358816bb03/hatchling-1.27.0.tar.gz"
+    sha256 "971c296d9819abb3811112fc52c7a9751c8d381898f36533bb16f9791e941fd6"
+  end
+
+  # pip here is the Command Line Tools' (21.2.4 on Python 3.9), not brew's. It has no
+  # `--python` and no `--uploaded-prior-to`, which is why brew's own `venv.pip_install`
+  # and `std_pip_args` are not used: they pass both. The venv has no pip of its own
+  # (--without-pip) and sees the system's through --system-site-packages, so each step
+  # runs the venv's python with `-m pip`, installing into the venv it runs from.
+  def pip_into(target, venv_python)
+    system venv_python, "-m", "pip", "install", "--verbose", "--no-deps", "--ignore-installed",
+           "--no-compile", "--no-build-isolation", "--disable-pip-version-check", "--prefix=#{libexec}", target
   end
 
   def install
-    venv = virtualenv_create(libexec, "python3.13")
+    unless File.executable?(SYSTEM_PYTHON) &&
+           quiet_system(SYSTEM_PYTHON, "-c", "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)")
+      odie "Fleet Command builds on macOS's own Python (/usr/bin/python3, 3.9 or newer), " \
+           "and it is missing or too old. Install the Command Line Tools: xcode-select --install"
+    end
+    virtualenv_create(libexec, SYSTEM_PYTHON)
+    venv_python = libexec/"bin/python"
     # Dependencies first, then hatchling, whose own build imports them; then fleet.
-    venv.pip_install resources.reject { |r| r.name == "hatchling" }, build_isolation: false
-    venv.pip_install resource("hatchling"), build_isolation: false
-    venv.pip_install_and_link buildpath, build_isolation: false
+    resources.reject { |r| r.name == "hatchling" }.each do |r|
+      r.stage { pip_into(Dir["*.whl"].first || Dir.pwd, venv_python) }
+    end
+    resource("hatchling").stage { pip_into(Dir.pwd, venv_python) }
+    pip_into(buildpath, venv_python)
+    bin.install_symlink libexec/"bin/fleet"
     # The menu bar's source and the service scripts, which the wheel does not carry.
     # Under pkgshare they are reached through opt/fleet/share/fleet, a path an upgrade
     # does not move: service/install-menubar.sh builds from there on a brew install.
