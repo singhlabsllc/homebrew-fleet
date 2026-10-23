@@ -24,9 +24,9 @@ class Fleet < Formula
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/psingh24/fleet"
   url "ssh://git@github.com/psingh24/fleet.git",
-      tag:      "v5.1.0a64",
-      revision: "616045128e682c2a6b04b4511145b69f552fe6a6"
-  version "5.1.0a64"
+      tag:      "v5.1.0a65",
+      revision: "1efcefdf38ceeedb7131079849c59b8bd05a0fad"
+  version "5.1.0a65"
 
   # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
   # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
