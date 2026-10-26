@@ -6,27 +6,27 @@
 #
 #   url       the real forge account. This tree is a clean-room export, so the account
 #             is spelled `acme` here (SANITIZATION.md, "org or forge account"); tap.sh
-#             reads the real one off this checkout's `origin` remote. It is written as
-#             a URI, ssh://git@host/owner/repo.git: brew parses the url with Ruby's URI,
-#             which refuses the scp-style git@host:owner/repo.git that git remotes
-#             usually use ("bad URI (is not URI?)"), and tap.sh rewrites that form.
+#             reads the real one off this checkout's `origin` remote and writes it as
+#             HTTPS whatever the remote's spelling (fleet#510).
 #   revision  the commit the release tag points at, known only once the tag exists.
 #
 # The version below is held equal to fleet_command.__version__ by tests/test_homebrew.py,
 # so a release that forgets this file fails the suite. It is the PEP 440 string as is:
 # brew's Version orders 5.1.0a24 < 5.1.0a25 < 5.1.0a26 < 5.1.0, measured 2026-10-01.
 #
-# The source is fetched over SSH from a private repository, so anyone whose SSH key can
-# read it can install; there is no token and nothing tied to one person.
+# The source is fetched over HTTPS from a private repository, so git asks its credential
+# helper: anyone who can read the repository and has run `gh auth login` and `gh auth
+# setup-git` can install, with no SSH key and no token in the formula. A machine that
+# fetches over SSH instead rewrites the URL with a global `insteadOf` (docs/homebrew.md).
 class Fleet < Formula
   include Language::Python::Virtualenv
 
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/psingh24/fleet"
-  url "ssh://git@github.com/psingh24/fleet.git",
-      tag:      "v5.1.0a68",
-      revision: "fc81ec2b7bc3358d9932797d778c165f9d6496ac"
-  version "5.1.0a68"
+  url "https://github.com/psingh24/fleet.git",
+      tag:      "v5.1.0a69",
+      revision: "deba64a9c84e4ba7fb6120a0d278d0c38faf3c23"
+  version "5.1.0a69"
 
   # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
   # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
