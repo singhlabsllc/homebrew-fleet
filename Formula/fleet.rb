@@ -14,19 +14,18 @@
 # so a release that forgets this file fails the suite. It is the PEP 440 string as is:
 # brew's Version orders 5.1.0a24 < 5.1.0a25 < 5.1.0a26 < 5.1.0, measured 2026-10-01.
 #
-# The source is fetched over HTTPS from a private repository, so git asks its credential
-# helper: anyone who can read the repository and has run `gh auth login` and `gh auth
-# setup-git` can install, with no SSH key and no token in the formula. A machine that
-# fetches over SSH instead rewrites the URL with a global `insteadOf` (docs/homebrew.md).
+# The tap's copy does not build from this git URL: release.yml runs tap.sh with
+# PUBLISH_SDIST=1, which attaches the release's sdist to a public Release on the tap and
+# rewrites url/tag/revision into that tarball's url and sha256 (fleet#520). Anyone can
+# install; the source repository stays private.
 class Fleet < Formula
   include Language::Python::Virtualenv
 
   desc "Work router and board for AI coding agents"
-  homepage "https://github.com/psingh24/fleet"
-  url "https://github.com/psingh24/fleet.git",
-      tag:      "v5.1.0a69",
-      revision: "deba64a9c84e4ba7fb6120a0d278d0c38faf3c23"
-  version "5.1.0a69"
+  homepage "https://github.com/singhlabsllc/homebrew-fleet"
+  url "https://github.com/singhlabsllc/homebrew-fleet/releases/download/v5.2.0/fleet_command-5.2.0.tar.gz"
+  sha256 "2baff2a244be63fd894f641310c88e5566aa16835f71f1ffead95881ec578485"
+  version "5.2.0"
 
   # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
   # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
