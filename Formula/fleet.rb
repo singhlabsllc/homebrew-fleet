@@ -15,17 +15,61 @@
 # brew's Version orders 5.1.0a24 < 5.1.0a25 < 5.1.0a26 < 5.1.0, measured 2026-10-01.
 #
 # The tap's copy does not build from this git URL: release.yml runs tap.sh with
-# PUBLISH_SDIST=1, which attaches the release's sdist to a public Release on the tap and
-# rewrites url/tag/revision into that tarball's url and sha256 (fleet#520). Anyone can
-# install; the source repository stays private.
+# PUBLISH_SDIST=1, which rewrites url/tag/revision into the invite relay's
+# /download/<tag>/<file> url, fetched with FleetInviteDownloadStrategy below, and the
+# tarball's sha256 (fleet#549; before it, a public Release on the tap, fleet#520). The
+# tarball itself stays on the private source repository's Release; the relay streams it to
+# a caller holding a live invite code. The tap's Release carries the notes only.
+
+# THE BETA'S DOWNLOAD GATE (fleet#549). A plain curl download that adds one header,
+# `X-Fleet-Invite`, from the tester's HOMEBREW_FLEET_INVITE. Homebrew passes HOMEBREW_*
+# variables through its environment filter (bin/brew keeps "${!HOMEBREW_@}" when it
+# re-execs with `env -i`), and this name is not one it scrubs: EnvSensitive#sensitive?
+# matches only cookie|key|token|password|passphrase|auth, so the value is the same at
+# evaluation and at download time. It is read when curl runs, never stored in the
+# formula's url or meta, and `--max-redirs 0` keeps it from following a redirect to any
+# other host (the relay streams the file itself and never redirects). With no code set,
+# the download stops with a sentence saying where to put one, before anything is fetched.
+class FleetInviteDownloadStrategy < CurlDownloadStrategy
+  INVITE = "HOMEBREW_FLEET_INVITE".freeze
+  WHERE = "Fleet Command's beta downloads need your invite code. Put it in your shell " \
+          "profile, then open a new terminal and run the command again:\n" \
+          "  echo 'export #{INVITE}=FLT-XXXX-XXXX' >> ~/.zshrc\n" \
+          "(or add the line #{INVITE}=FLT-XXXX-XXXX to ~/.homebrew/brew.env). " \
+          "No code yet? Ask the person who invited you.".freeze
+
+  def invite
+    ENV.fetch(INVITE, "").strip
+  end
+
+  def fetch(timeout: nil)
+    raise CurlDownloadStrategyError.new(url, WHERE) if invite.empty?
+
+    begin
+      super
+    rescue CurlDownloadStrategyError, ErrorDuringExecution => e
+      raise CurlDownloadStrategyError.new(
+        url, "The invite service refused the download (#{e.message.lines.last.to_s.strip}). " \
+             "A 401 means #{INVITE} is not a code it knows (check for a typo); a 403 means " \
+             "the code was revoked or has expired; ask the person who invited you."
+      )
+    end
+  end
+
+  def _curl_args
+    super + ["--max-redirs", "0", "--header", "X-Fleet-Invite: #{invite}"]
+  end
+end
+
 class Fleet < Formula
   include Language::Python::Virtualenv
 
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/singhlabsllc/homebrew-fleet"
-  url "https://github.com/singhlabsllc/homebrew-fleet/releases/download/v5.2.0/fleet_command-5.2.0.tar.gz"
-  sha256 "2baff2a244be63fd894f641310c88e5566aa16835f71f1ffead95881ec578485"
-  version "5.2.0"
+  url "https://fleet-feedback-relay.singhlabsllc.workers.dev/download/v5.2.1a1/fleet_command-5.2.1a1.tar.gz",
+      using: FleetInviteDownloadStrategy
+  sha256 "26ad437fb099cf06a02f6c79799046872caa29ba41c8e3e104dcb9b379108499"
+  version "5.2.1a1"
 
   # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
   # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
@@ -125,13 +169,18 @@ class Fleet < Formula
   # services/fleet.env under HOMEBREW_USER_CONFIG_HOME, and restart the service;
   # docs/homebrew.md has the details.
   #
-  # PATH is brew's standard service PATH. It holds brew's own bin, so a tmux or a
-  # git from brew is found; a backend CLI installed elsewhere, such as an app bundle's
-  # bin directory, is not, and `fleet health` from a shell cannot tell you, because the
-  # shell has it.
+  # PATH is brew's standard service PATH, then the per-user directories the agent CLIs
+  # install into (fleet#540), for the user the service is rendered for: Claude Code's own
+  # installer puts `claude` in ~/.local/bin, which launchd's PATH never has. launchd does
+  # not expand a tilde in PATH, so these are spelled out. A backend CLI installed
+  # elsewhere, such as an app bundle's bin directory, is still not found, and `fleet
+  # health` from a shell cannot tell you, because the shell has it; `fleet health` now
+  # reads the installed service's PATH instead.
   service do
     run [opt_bin/"fleet", "serve"]
-    environment_variables FLEET_HOME: "~/.config/fleet", PATH: std_service_path_env
+    user_bins = %w[.local/bin .claude/local .opencode/bin].map { |d| File.join(Dir.home, d) }
+    environment_variables FLEET_HOME: "~/.config/fleet",
+                          PATH:       "#{std_service_path_env}:#{user_bins.join(":")}"
     keep_alive true
     process_type :background
     working_dir var
