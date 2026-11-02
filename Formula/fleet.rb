@@ -32,10 +32,12 @@
 # the download stops with a sentence saying where to put one, before anything is fetched.
 class FleetInviteDownloadStrategy < CurlDownloadStrategy
   INVITE = "HOMEBREW_FLEET_INVITE".freeze
-  WHERE = "Fleet Command's beta downloads need your invite code. Put it in your shell " \
-          "profile, then open a new terminal and run the command again:\n" \
-          "  echo 'export #{INVITE}=FLT-XXXX-XXXX' >> ~/.zshrc\n" \
-          "(or add the line #{INVITE}=FLT-XXXX-XXXX to ~/.homebrew/brew.env). " \
+  WHERE = "Fleet Command's beta downloads need your invite code. Put it in " \
+          "~/.homebrew/brew.env, which brew reads whoever starts it:\n" \
+          "  mkdir -p ~/.homebrew && echo '#{INVITE}=FLT-XXXX-XXXX' >> ~/.homebrew/brew.env " \
+          "&& chmod 600 ~/.homebrew/brew.env\n" \
+          "An export in ~/.zshrc only helps a brew install or brew upgrade typed in a new " \
+          "terminal; the background update never reads it. " \
           "No code yet? Ask the person who invited you.".freeze
 
   def invite
@@ -66,10 +68,10 @@ class Fleet < Formula
 
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/singhlabsllc/homebrew-fleet"
-  url "https://fleet-feedback-relay.singhlabsllc.workers.dev/download/v5.2.1a1/fleet_command-5.2.1a1.tar.gz",
+  url "https://fleet-feedback-relay.singhlabsllc.workers.dev/download/v5.3.0/fleet_command-5.3.0.tar.gz",
       using: FleetInviteDownloadStrategy
-  sha256 "26ad437fb099cf06a02f6c79799046872caa29ba41c8e3e104dcb9b379108499"
-  version "5.2.1a1"
+  sha256 "23c5aaccb2dcd5f109180eedf85222ce26860aaeec816178b059113cdf546981"
+  version "5.3.0"
 
   # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
   # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
