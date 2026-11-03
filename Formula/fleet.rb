@@ -44,8 +44,26 @@ class FleetInviteDownloadStrategy < CurlDownloadStrategy
     ENV.fetch(INVITE, "").strip
   end
 
+  # bin/brew reads brew.env with `while read`, which drops a last line with no newline, so a
+  # code typed into the file by hand is silently ignored (fleet#851). Name that file.
+  def where
+    unended = [ENV["XDG_CONFIG_HOME"] && "#{ENV["XDG_CONFIG_HOME"]}/homebrew",
+               "#{Dir.home}/.homebrew", "#{Dir.home}/.config/homebrew"].compact.uniq.map do |d|
+      "#{d}/brew.env"
+    end.find do |f|
+      text = File.file?(f) ? File.read(f) : ""
+      text.include?("#{INVITE}=") && !text.end_with?("\n")
+    end
+    return WHERE unless unended
+
+    "#{unended} has your #{INVITE} line, but the file does not end with a newline, and brew " \
+      "skips an unfinished last line. Add one, then run brew again:\n  echo >> #{unended}"
+  rescue SystemCallError
+    WHERE
+  end
+
   def fetch(timeout: nil)
-    raise CurlDownloadStrategyError.new(url, WHERE) if invite.empty?
+    raise CurlDownloadStrategyError.new(url, where) if invite.empty?
 
     begin
       super
@@ -68,10 +86,10 @@ class Fleet < Formula
 
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/singhlabsllc/homebrew-fleet"
-  url "https://fleet-feedback-relay.singhlabsllc.workers.dev/download/v5.3.1/fleet_command-5.3.1.tar.gz",
+  url "https://fleet-feedback-relay.singhlabsllc.workers.dev/download/v5.3.2/fleet_command-5.3.2.tar.gz",
       using: FleetInviteDownloadStrategy
-  sha256 "e769dca96ff129d3056da610848e71a8332568831a8b50f4e89697bfe0544056"
-  version "5.3.1"
+  sha256 "974f3a207f5fe6b1e31c5c6e9a2b6da25554d6ceb98ce6ab75ecc21adee3c864"
+  version "5.3.2"
 
   # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
   # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
