@@ -86,10 +86,10 @@ class Fleet < Formula
 
   desc "Work router and board for AI coding agents"
   homepage "https://github.com/singhlabsllc/homebrew-fleet"
-  url "https://fleet-feedback-relay.singhlabsllc.workers.dev/download/v5.4.5/fleet_command-5.4.5.tar.gz",
+  url "https://fleet-feedback-relay.singhlabsllc.workers.dev/download/v5.4.6/fleet_command-5.4.6.tar.gz",
       using: FleetInviteDownloadStrategy
-  sha256 "94fc025f47a97bc4c9e591894d3343339c1f0077e5f9f556a6446aea1ea21946"
-  version "5.4.5"
+  sha256 "d5a67e9789a3ca577cf79875ecdb9554d331d76f48824c76f560d9cf979244ee"
+  version "5.4.6"
 
   # No `depends_on "python@3.13"`, on purpose (fleet#440). The venv is built on macOS's own
   # /usr/bin/python3, the Command Line Tools' Python (3.9 on current macOS), which brew
